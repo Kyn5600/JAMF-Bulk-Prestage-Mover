@@ -41,14 +41,16 @@ def get_prestage_scope(token, prestage_id):
     return response.json()
 
 def remove_devices_from_prestage(token, prestage_id, serials, version_lock):
-    url = f"{JAMF_URL}/api/v2/mobile-device-prestages/{prestage_id}/scope"
+    url = f"{JAMF_URL}/api/v2/mobile-device-prestages/{prestage_id}/scope/delete-multiple"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
     payload = {
-        "serialNumbers": serials,
-        "versionLock": version_lock
+        "serialNumbers": [
+            serials
+        ],
+        "versionLock": 1
     }
     response = requests.delete(url, headers=headers, json=payload)
     response.raise_for_status()
