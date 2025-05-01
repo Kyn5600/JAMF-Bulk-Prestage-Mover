@@ -8,11 +8,8 @@ CLIENT_SECRET = "your_client_secret_here"
 DEST_PRESTAGE_ID = 9999  
 
 # List of serial numbers to move
-serial_numbers = [
-    "C02XXXXXX1",
-    "C02XXXXXX2",
-    "C02XXXXXX3",
-]
+serial_numbers = []
+serialCount = 0
 
 def get_access_token():
     url = f"{JAMF_URL}/api/oauth/token"
@@ -71,6 +68,11 @@ def add_devices_to_prestage(token, prestage_id, serials, version_lock):
     print(f"Added {len(serials)} devices to PreStage ID {prestage_id}.")
 
 def main():
+    tempSerial = input("Input serial (Leave empty to exit):")
+    serialCount = 0
+    while tempSerial != "":
+        serial_numbers[serialCount] = tempSerial
+        
     token = get_access_token()
     prestages = get_prestage_scopes(token)
 
