@@ -90,7 +90,8 @@ def fetch_device_data(token, asset_tag):
     current_prestage_id = fetch_device_prestage(token,data.get(device_name))
     return serial, jamf_id, current_prestage_id
 
-def fetch_device_prestage(token,name)
+def fetch_device_prestage(token,name):
+    prestage_id = 0
     nameparts = name.split('-')
     prestage_name = "NISD-"
     for part in nameparts:  
@@ -105,6 +106,10 @@ def fetch_device_prestage(token,name)
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     data = response.json()
+    
+    for item in data.get("results", []):
+        if item.get("displayName") == prestage_id:
+            return item.get("id")
     
     return prestage_id
 def resolve_prestage_name(token, name_hint):
@@ -164,8 +169,6 @@ def main():
         DEST_PRESTAGE_ID = int(prestage_input)
     except ValueError:
         DEST_PRESTAGE_ID = resolve_prestage_name(token, prestage_input)
-
-    input("Timeout.")  # Pause
 
     for i in range(len(devices[0])):
         serial, jamf_id, prestage_id = fetch_device_data(token, devices[0][i])
