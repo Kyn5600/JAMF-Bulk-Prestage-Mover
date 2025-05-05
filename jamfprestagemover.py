@@ -87,13 +87,26 @@ def fetch_device_data(token, asset_tag):
     data = response.json()
     serial = data.get("serial_number")
     jamf_id = data.get("id")
-    current_prestage_id = 1234  # TODO: Replace with real lookup if needed
+    current_prestage_id = fetch_device_prestage(token,data.get(device_name))
     return serial, jamf_id, current_prestage_id
 
-def fetch_device_prestage(token,asset_tag):
-    #Possibly a nightly local map. 
-    return
+def fetch_device_prestage(token,name)
+    nameparts = name.split('-')
+    prestage_name = "NISD-"
+    for part in nameparts:  
+        prestage_name += str(part)
+    prestage_name += "-PEP"
 
+    url = "https://nisdmobile.jamfcloud.com/api/v2/mobile-device-prestages?sort=name%3Aasc"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    data = response.json()
+    
+    return prestage_id
 def resolve_prestage_name(token, name_hint):
     import re
 
