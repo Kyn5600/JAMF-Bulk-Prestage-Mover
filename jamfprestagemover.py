@@ -1,6 +1,6 @@
 import requests
-from ui import run_ui
 import re
+from ui import run_ui, ui_print, get_client_credentials
 
 # Configuration
 JAMF_URL = "https://xxxxx.jamfcloud.com"
@@ -23,7 +23,10 @@ def get_access_token():
         "client_secret": CLIENT_SECRET
     }
     response = requests.post(url, headers=headers, data=data)
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except:
+        ui_print("An error occurred getting access token. Check client credentials and try again.")
     return response.json()["access_token"]
 
 def get_prestage_scope(token, prestage_id):
@@ -41,7 +44,6 @@ def remove_devices_from_prestage(token, devices):
 
     prestage_map = {}
 
-    # Group serials by PreStage ID
     for i in range(len(devices[0])):
         prestage_id = devices[3][i]
         serial = devices[1][i]
@@ -59,7 +61,7 @@ def remove_devices_from_prestage(token, devices):
         }
         response = requests.delete(url, headers=headers, json=payload)
         response.raise_for_status()
-        print(f"Removed {len(serials)} devices from PreStage ID {prestage_id}.")
+        ui_print(f"Removed {len(serials)} devices from PreStage ID {prestage_id}.")
 
 def add_devices_to_prestage(token, devices, dest_prestage_id):
     headers = {
@@ -68,7 +70,7 @@ def add_devices_to_prestage(token, devices, dest_prestage_id):
     }
     scope = get_prestage_scope(token, dest_prestage_id)
     version_lock = scope.get("versionLock", 1)
-    serials = devices[1]  # All serials
+    serials = devices[1]
 
     url = f"{JAMF_URL}/api/v2/mobile-device-prestages/{dest_prestage_id}/scope"
     payload = {
@@ -77,20 +79,23 @@ def add_devices_to_prestage(token, devices, dest_prestage_id):
     }
     response = requests.put(url, headers=headers, json=payload)
     response.raise_for_status()
-    print(f"Added {len(serials)} devices to PreStage ID {dest_prestage_id}.")
+    ui_print(f"Added {len(serials)} devices to PreStage ID {dest_prestage_id}.")
 
 def fetch_device_data(token, asset_tag):
     url = f"{JAMF_URL}/JSSResource/mobiledevices/match/{asset_tag}"
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(url, headers=headers)
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except:
+        ui_print("An error occurred fetching device data. Check client credentials.")
     data = response.json()
     serial = data.get("serial_number")
     jamf_id = data.get("id")
-    current_prestage_id = fetch_device_prestage(token,data.get(device_name))
+    current_prestage_id = fetch_device_prestage(token, data.get("device_name"))
     return serial, jamf_id, current_prestage_id
 
-def fetch_device_prestage(token,name):
+def fetch_device_prestage(token, name):
     prestage_id = 0
     nameparts = name.split('-')
     prestage_name = "NISD-"
@@ -112,9 +117,8 @@ def fetch_device_prestage(token,name):
             return item.get("id")
     
     return prestage_id
-def resolve_prestage_name(token, name_hint):
-    import re
 
+def resolve_prestage_name(token, name_hint):
     url = f"{JAMF_URL}/api/v2/mobile-device-prestages"
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(url, headers=headers)
@@ -134,32 +138,35 @@ def resolve_prestage_name(token, name_hint):
     if not matches:
         raise ValueError(f"No PreStages found matching '{name_hint}'.")
 
-    # Sort by score descending
     matches.sort(reverse=True)
-
-    # If top score is ambiguous (shared with multiple entries)
     top_score = matches[0][0]
     top_matches = [m for m in matches if m[0] == top_score]
 
     if len(top_matches) > 1:
-        print("\n⚠️ Multiple PreStages matched your input:")
+        ui_print("\n⚠️ Multiple PreStages matched your input:")
         for idx, (_, pid, display_name) in enumerate(top_matches):
-            print(f"  [{idx + 1}] ID {pid}: {display_name}")
+            ui_print(f"  [{idx + 1}] ID {pid}: {display_name}")
         while True:
             choice = input(f"\nSelect a PreStage by number (1-{len(top_matches)}): ")
             if choice.isdigit():
                 choice = int(choice)
                 if 1 <= choice <= len(top_matches):
                     selected = top_matches[choice - 1]
-                    print(f"\n✅ Using PreStage: ID {selected[1]} -> {selected[2]}")
+                    ui_print(f"\n✅ Using PreStage: ID {selected[1]} -> {selected[2]}")
                     return selected[1]
-            print("Invalid selection. Please try again.")
+            ui_print("Invalid selection. Please try again.")
     else:
-        print(f"✅ Matched PreStage: ID {matches[0][1]} -> {matches[0][2]}")
+        ui_print(f"✅ Matched PreStage: ID {matches[0][1]} -> {matches[0][2]}")
         return matches[0][1]
 
 def main():
-    token = 0#get_access_token()
+    global CLIENT_ID, CLIENT_SECRET
+
+    # Ask user for API credentials via UI
+    CLIENT_ID, CLIENT_SECRET = get_client_credentials()
+
+    token = get_access_token()
+
     devices[0], prestage_input = run_ui(token)
     devices[1] = [None] * len(devices[0])
     devices[2] = [None] * len(devices[0])
