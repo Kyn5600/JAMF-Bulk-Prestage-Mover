@@ -103,7 +103,7 @@ def fetch_device_prestage(token, name):
         prestage_name += str(part)
     prestage_name += "-PEP"
 
-    url = "https://nisdmobile.jamfcloud.com/api/v2/mobile-device-prestages?sort=name%3Aasc"
+    url = f"{JAMF_URL}/api/v2/mobile-device-prestages?sort=name%3Aasc"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
