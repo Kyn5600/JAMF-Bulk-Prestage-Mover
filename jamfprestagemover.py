@@ -158,7 +158,29 @@ def resolve_prestage_name(token, name_hint):
     else:
         ui_print(f"✅ Matched PreStage: ID {matches[0][1]} -> {matches[0][2]}")
         return matches[0][1]
+        
+def verify_devices_in_prestage(token, devices, dest_prestage_id):
+    ui_print("\n🔍 Verifying devices in destination PreStage...")
 
+    expected_serials = set(devices[1])
+    actual_serials = get_prestage_serials(token, dest_prestage_id)
+
+    success = expected_serials & actual_serials
+    missing = expected_serials - actual_serials
+
+    for serial in success:
+        ui_print(f"✅ {serial} confirmed in PreStage {dest_prestage_id}")
+
+    for serial in missing:
+        ui_print(f"❌ {serial} NOT found in PreStage {dest_prestage_id}")
+
+    ui_print(
+        f"\nVerification complete: "
+        f"{len(success)}/{len(expected_serials)} devices confirmed."
+    )
+
+    return len(missing) == 0
+    
 def main():
     global CLIENT_ID, CLIENT_SECRET
 
@@ -186,5 +208,6 @@ def main():
     remove_devices_from_prestage(token, devices)
     add_devices_to_prestage(token, devices, DEST_PRESTAGE_ID)
 
+    verify_devices_in_prestage(token, devices, DEST_PRESTAGE_ID)
 if __name__ == "__main__":
     main()
